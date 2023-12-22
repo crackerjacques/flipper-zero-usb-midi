@@ -33,7 +33,7 @@ int32_t usb_midi_app(void* p) {
 
     MidiParser* parser = midi_parser_alloc();
     uint32_t events;
-    uint8_t current_note = 255;
+    uint8_t current_note = 60; // C4
 
     while(1) {
         events = furi_thread_flags_wait(MidiThreadEventAll, FuriFlagWaitAny, FuriWaitForever);
@@ -42,8 +42,6 @@ int32_t usb_midi_app(void* p) {
             if(events & MidiThreadEventRx) {
                 uint8_t buffer[64];
                 size_t size = midi_usb_rx(buffer, sizeof(buffer));
-                // loopback
-                // midi_usb_tx(buffer, size);
                 size_t start = 0;
                 while(start < size) {
                     CodeIndex code_index = code_index_from_data(buffer[start]);
@@ -71,6 +69,18 @@ int32_t usb_midi_app(void* p) {
                 }
             }
         }
+
+        // Send
+        uint8_t note_on_message[3] = {0x90, current_note, 127};
+        midi_usb_tx(note_on_message, sizeof(note_on_message));
+
+        if(current_note < 72) {
+            current_note++;
+        } else {
+            current_note = 60;
+        }
+
+        furi_thread_sleep(500);
     }
 
     midi_parser_free(parser);
